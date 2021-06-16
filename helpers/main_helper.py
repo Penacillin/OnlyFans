@@ -14,11 +14,11 @@ from itertools import zip_longest
 from multiprocessing.dummy import Pool as ThreadPool
 from types import SimpleNamespace
 from typing import Any, Optional, Tuple, Union
+from time import sleep
 
 import classes.make_settings as make_settings
 import classes.prepare_webhooks as prepare_webhooks
 import psutil
-from PIL import Image, ExifTags
 import piexif
 
 import requests
@@ -124,18 +124,20 @@ async def format_image(filepath: str, timestamp: float):
                 if os_name == "Windows":
                     from win32_setctime import setctime
                     setctime(filepath, timestamp)
-                    print(f"Updated Creation Time {filepath}")
                 # Set jpeg Data
-                exif_dict = piexif.load(filepath)
-                datetime_str = datetime.fromtimestamp(timestamp).strftime("%Y:%m:%d %H:%M:%S")
-                exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal] = datetime_str
-                exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized] = datetime_str
-                piexif.remove(filepath)
-                exif_bytes = piexif.dump(exif_dict)
-                piexif.insert(exif_bytes, filepath)
+                if os.path.splitext(filepath)[1] in ['.jpg', '.tiff']:
+                    # print("xxx", filepath)
+                    exif_dict = piexif.load(filepath)
+                    datetime_str = datetime.fromtimestamp(timestamp).strftime("%Y:%m:%d %H:%M:%S")
+                    exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal] = datetime_str
+                    exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized] = datetime_str
+                    piexif.remove(filepath)
+                    exif_bytes = piexif.dump(exif_dict)
+                    piexif.insert(exif_bytes, filepath)
                 os.utime(filepath, (timestamp, timestamp))
-                print(f"Updated Modification Time {filepath}")
             except Exception as e:
+                print(e, filepath, timestamp)
+                sleep(1)
                 continue
             break
 
